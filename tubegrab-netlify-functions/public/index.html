@@ -170,10 +170,6 @@
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 8px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
 
         .video-id { color: var(--text-gray); font-size: 0.85rem; font-family: 'Space Mono', monospace; }
@@ -217,7 +213,20 @@
             box-shadow: none;
         }
 
-        .download-btn svg { width: 22px; height: 22px; }
+        .download-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+        .btn-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .btn-content .service-name {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            font-weight: 400;
+        }
 
         .services-note {
             text-align: center;
@@ -254,7 +263,6 @@
         }
 
         .feature-icon svg { width: 24px; height: 24px; stroke: var(--accent-red); }
-
         .feature h3 { font-size: 0.95rem; margin-bottom: 6px; }
         .feature p { font-size: 0.85rem; color: var(--text-gray); }
 
@@ -303,52 +311,60 @@
                         <img id="thumbnail" src="" alt="Video thumbnail">
                     </div>
                     <div class="video-info">
-                        <div class="video-title" id="videoTitle">Video detected!</div>
+                        <div class="video-title">Video ready to download!</div>
                         <div class="video-id" id="videoId"></div>
                     </div>
                 </div>
             </div>
 
             <div class="download-options">
-                <button class="download-btn" id="btn1" onclick="openDownloader(1)">
+                <button class="download-btn" onclick="openDownloader(1)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Download MP4
+                    <div class="btn-content">
+                        MP4 Video
+                        <span class="service-name">via SaveFrom</span>
+                    </div>
                 </button>
-                <button class="download-btn secondary" id="btn2" onclick="openDownloader(2)">
+                <button class="download-btn secondary" onclick="openDownloader(2)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18V5l12-2v13"/>
                         <circle cx="6" cy="18" r="3"/>
                         <circle cx="18" cy="16" r="3"/>
                     </svg>
-                    Download MP3
+                    <div class="btn-content">
+                        MP3 Audio
+                        <span class="service-name">via Y2Mate</span>
+                    </div>
                 </button>
-                <button class="download-btn secondary" id="btn3" onclick="openDownloader(3)">
+                <button class="download-btn secondary" onclick="openDownloader(3)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                        <rect x="2" y="2" width="20" height="20" rx="2"/>
                         <line x1="7" y1="2" x2="7" y2="22"/>
                         <line x1="17" y1="2" x2="17" y2="22"/>
                         <line x1="2" y1="12" x2="22" y2="12"/>
-                        <line x1="2" y1="7" x2="7" y2="7"/>
-                        <line x1="2" y1="17" x2="7" y2="17"/>
-                        <line x1="17" y1="17" x2="22" y2="17"/>
-                        <line x1="17" y1="7" x2="22" y2="7"/>
                     </svg>
-                    HD Quality
+                    <div class="btn-content">
+                        HD 1080p
+                        <span class="service-name">via 10downloader</span>
+                    </div>
                 </button>
-                <button class="download-btn secondary" id="btn4" onclick="openDownloader(4)">
+                <button class="download-btn secondary" onclick="openDownloader(4)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                     </svg>
-                    Fast Download
+                    <div class="btn-content">
+                        All Formats
+                        <span class="service-name">via 9xBuddy</span>
+                    </div>
                 </button>
             </div>
 
             <div class="services-note">
-                Opens download service in new tab • Select quality there • 100% free
+                Opens download service in new tab • Select quality there • If one doesn't work, try another!
             </div>
         </div>
 
@@ -359,8 +375,8 @@
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                     </svg>
                 </div>
-                <h3>Multiple Services</h3>
-                <p>Choose from 4 download options</p>
+                <h3>4 Options</h3>
+                <p>If one doesn't work, try another!</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">
@@ -369,7 +385,7 @@
                     </svg>
                 </div>
                 <h3>No Sign Up</h3>
-                <p>Download instantly, no account needed</p>
+                <p>Download instantly, free</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">
@@ -381,7 +397,7 @@
                     </svg>
                 </div>
                 <h3>All Qualities</h3>
-                <p>360p to 4K available</p>
+                <p>360p up to 4K</p>
             </div>
         </div>
 
@@ -394,16 +410,7 @@
         const urlInput = document.getElementById('urlInput');
         const videoPreview = document.getElementById('videoPreview');
         const thumbnail = document.getElementById('thumbnail');
-        const videoTitle = document.getElementById('videoTitle');
-        const videoId = document.getElementById('videoId');
-
-        // Download services that work
-        const services = {
-            1: (id) => `https://yt1s.com/youtube-to-mp4/${id}`,
-            2: (id) => `https://yt1s.com/youtube-to-mp3/${id}`,
-            3: (id) => `https://www.y2mate.com/youtube/${id}`,
-            4: (id) => `https://9xbuddy.com/process?url=https://www.youtube.com/watch?v=${id}`
-        };
+        const videoIdEl = document.getElementById('videoId');
 
         function extractVideoId(url) {
             const patterns = [
@@ -417,21 +424,7 @@
             return null;
         }
 
-        function updatePreview() {
-            const url = urlInput.value.trim();
-            const id = extractVideoId(url);
-            
-            if (id) {
-                thumbnail.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-                videoTitle.textContent = 'Video ready to download!';
-                videoId.textContent = `ID: ${id}`;
-                videoPreview.classList.add('active');
-            } else {
-                videoPreview.classList.remove('active');
-            }
-        }
-
-        function openDownloader(serviceNum) {
+        function openDownloader(num) {
             const url = urlInput.value.trim();
             const id = extractVideoId(url);
             
@@ -440,16 +433,43 @@
                 urlInput.focus();
                 return;
             }
+
+            const fullUrl = `https://www.youtube.com/watch?v=${id}`;
+            let downloadUrl;
+
+            switch(num) {
+                case 1: // SaveFrom
+                    downloadUrl = `https://en.savefrom.net/391GA/?url=${encodeURIComponent(fullUrl)}`;
+                    break;
+                case 2: // Y2Mate
+                    downloadUrl = `https://www.y2mate.com/youtube/${id}`;
+                    break;
+                case 3: // 10downloader
+                    downloadUrl = `https://10downloader.com/download?v=${encodeURIComponent(fullUrl)}`;
+                    break;
+                case 4: // 9xBuddy
+                    downloadUrl = `https://9xbuddy.com/process?url=${encodeURIComponent(fullUrl)}`;
+                    break;
+            }
             
-            const downloadUrl = services[serviceNum](id);
             window.open(downloadUrl, '_blank');
         }
 
-        // Live preview as user types
+        function updatePreview() {
+            const url = urlInput.value.trim();
+            const id = extractVideoId(url);
+            
+            if (id) {
+                thumbnail.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+                videoIdEl.textContent = `ID: ${id}`;
+                videoPreview.classList.add('active');
+            } else {
+                videoPreview.classList.remove('active');
+            }
+        }
+
         urlInput.addEventListener('input', updatePreview);
         urlInput.addEventListener('paste', () => setTimeout(updatePreview, 100));
-
-        // Enter key triggers first download option
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && extractVideoId(urlInput.value)) {
                 openDownloader(1);
