@@ -19,7 +19,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct TerraBoost source
+      - name: Reconstruct and patch TerraBoost source
         shell: pwsh
         run: |
           $parts = Get-ChildItem .\terraboost-ci\tbpart_* | Sort-Object Name
@@ -27,6 +27,12 @@ jobs:
           [IO.File]::WriteAllBytes("$pwd\TerraBoost_CI.zip", [Convert]::FromBase64String($b64))
           Expand-Archive -Path .\TerraBoost_CI.zip -DestinationPath .\ci-src -Force
           Remove-Item .\ci-src\TerraBoost_CI\Localization\en-US_Mods.TerraBoost.hjson -Force -ErrorAction SilentlyContinue
+
+          $systemPath = '.\ci-src\TerraBoost_CI\Systems\TerraBoostSystem.cs'
+          $source = Get-Content $systemPath -Raw
+          $source = $source -replace '(?m)^\s*var font = FontAssets\.MouseText\.Value;\r?\n', ''
+          $source = $source -replace '(?m)^\s*spriteBatch\.DrawString\(font, text, position \+ new Vector2\(2f, 2f\), Color\.Black \* 0\.8f\);\r?\n\s*spriteBatch\.DrawString\(font, text, position, Color\.White\);', '        Utils.DrawBorderString(spriteBatch, text, position, Color.White);'
+          Set-Content $systemPath $source
 
       - name: Build TerraBoost
         shell: pwsh
