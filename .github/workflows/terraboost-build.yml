@@ -1,4 +1,4 @@
-name: Inspect TerraBoost/tModLoader timing
+name: Validate TerraBoost v0.2.2
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  inspect:
+  build:
     runs-on: windows-latest
     permissions:
       contents: read
@@ -19,27 +19,49 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build TerraBoost so tModLoader refs are restored
+      - name: Reconstruct exact v0.2.2 source ZIP
         shell: pwsh
         run: |
-          dotnet build .\terraboost-v020\TerraBoost\TerraBoost.csproj -c Release
+          $parts = Get-ChildItem .\terraboost-v022-payload\part_*.txt | Sort-Object Name
+          if ($parts.Count -ne 6) { throw "Expected 6 payload parts, found $($parts.Count)" }
+          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          [IO.File]::WriteAllBytes('.\TerraBoost_Optimization_v0.2.2_Source.zip', [Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash '.\TerraBoost_Optimization_v0.2.2_Source.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "Source SHA256: $hash"
+          if ($hash -ne '3d4589269b50a7c4e4b7b8a8045f4fcfe1b700d34e717c9a3a0521d3ac0f61f5') { throw "Source ZIP hash mismatch" }
+          Expand-Archive '.\TerraBoost_Optimization_v0.2.2_Source.zip' '.\v022' -Force
 
-      - name: Decompile Terraria.Main timing code
+      - name: Build exact TerraBoost v0.2.2 source
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $project = '.\v022\TerraBoost\TerraBoost.csproj'
+          $success = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            Write-Host "Build attempt $attempt"
+            dotnet build $project -c Release
+            if ($LASTEXITCODE -eq 0) { $success = $true; break }
+            if ($attempt -lt 3) { Start-Sleep -Seconds 30 }
+          }
+          if (-not $success) { throw 'TerraBoost v0.2.2 failed to build after 3 attempts' }
+
+      - name: Locate compiled tMod
         shell: pwsh
         run: |
-          dotnet tool install --global ilspycmd --version 9.*
-          $dll = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $dll) { throw 'tModLoader.dll not found' }
-          Write-Host "Using $($dll.FullName)"
-          ilspycmd -t Terraria.Main $dll.FullName | Out-File -FilePath .\Main_decompiled.cs -Encoding utf8
-          $patterns = @('TargetElapsedTime','terrariasFixedTiming','UpdateTimeAccumulator','FrameSkipMode','DoUpdate(','override void Update','ShouldUpdateEntities','GameUpdateCount')
-          foreach ($p in $patterns) {
-            Write-Host "===== $p ====="
-            Select-String -Path .\Main_decompiled.cs -Pattern $p -Context 12,30 | Select-Object -First 6 | ForEach-Object { $_.ToString(); $_.Context.PreContext; $_.Line; $_.Context.PostContext; Write-Host '---' }
+          $files = Get-ChildItem -Path .\v022 -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
+          if (-not $files) {
+            $files = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
           }
+          $file = $files | Select-Object -First 1
+          if (-not $file) { throw 'TerraBoost.tmod not found after build' }
+          Write-Host "Found: $($file.FullName)"
+          New-Item -ItemType Directory -Force -Path .\artifact | Out-Null
+          Copy-Item $file.FullName .\artifact\TerraBoost.tmod -Force
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Main-decompiled
-          path: Main_decompiled.cs
+          name: TerraBoost-v0.2.2-tmod
+          path: artifact/TerraBoost.tmod
           if-no-files-found: error
