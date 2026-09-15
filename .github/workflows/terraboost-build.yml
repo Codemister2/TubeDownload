@@ -1,4 +1,4 @@
-name: Inspect tModLoader frame pacing
+name: Validate TerraBoost v0.2.3 display hook
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  inspect:
+  build:
     runs-on: windows-latest
     permissions:
       contents: read
@@ -19,64 +19,60 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct source and restore exact tModLoader references
+      - name: Reconstruct v0.2.2 source
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $parts = Get-ChildItem .\terraboost-v022-payload\part_*.txt | Sort-Object Name
           $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
           [IO.File]::WriteAllBytes('.\source.zip', [Convert]::FromBase64String($b64))
           Expand-Archive '.\source.zip' '.\src' -Force
-          dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'restore/build failed' }
 
-      - name: Locate exact runtime assemblies
+      - name: Add v0.2.3 API compile probe
         shell: pwsh
         run: |
-          $tml = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\.nuget\\packages\\tomat.terraria.modloader.sdk' } | Select-Object -First 1
-          if (-not $tml) { $tml = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
-          if (-not $tml) { throw 'tModLoader.dll not found' }
-          Write-Host "TML=$($tml.FullName)"
-          Copy-Item $tml.FullName .\tModLoader.dll -Force
-          $fna = Get-ChildItem -Path $tml.DirectoryName -Filter FNA.dll -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($fna) { Copy-Item $fna.FullName .\FNA.dll -Force; Write-Host "FNA=$($fna.FullName)" }
+          @'
+          using System;
+          using Terraria;
+          using Terraria.ModLoader;
 
-      - name: Decompile Main and inspect pacing
-        shell: pwsh
-        run: |
-          dotnet tool install --global ilspycmd --version 9.*
-          ilspycmd -t Terraria.Main .\tModLoader.dll | Out-File .\Main_decompiled.cs -Encoding utf8
-          $patterns = @(
-            'EndDraw',
-            'TargetElapsedTime',
-            'IsFixedTimeStep',
-            'terrariasFixedTiming',
-            'UpdateTimeAccumulator',
-            'FrameSkipMode',
-            'frameRate',
-            'maxFrame',
-            'Sleep',
-            'SpinWait',
-            '100.0',
-            '0.01',
-            '10.0'
-          )
-          foreach ($p in $patterns) {
-            Write-Host "===== PATTERN: $p ====="
-            Select-String -Path .\Main_decompiled.cs -SimpleMatch -Pattern $p -Context 30,80 | Select-Object -First 8 | ForEach-Object {
-              $_.Context.PreContext
-              $_.Line
-              $_.Context.PostContext
-              Write-Host '-----'
-            }
+          namespace TerraBoost;
+
+          internal static class V023ApiProbe
+          {
+              internal static void Install()
+              {
+                  On_Main.SetDisplayMode += Hook;
+                  _ = Main.instance?.GraphicsDevice?.PresentationParameters.PresentationInterval.ToString();
+              }
+
+              internal static void Remove()
+              {
+                  On_Main.SetDisplayMode -= Hook;
+              }
+
+              private static void Hook(On_Main.orig_SetDisplayMode orig, int width, int height, bool fullscreen)
+              {
+                  if (Main.graphics is null || Main.instance is null)
+                  {
+                      orig(width, height, fullscreen);
+                      return;
+                  }
+
+                  var viewport = Main.instance.GraphicsDevice.Viewport;
+                  var pp = Main.instance.GraphicsDevice.PresentationParameters;
+                  bool sameMode = Main.graphics.IsFullScreen == fullscreen &&
+                                  Main.screenWidth == width && Main.screenHeight == height &&
+                                  viewport.Width == width && viewport.Height == height &&
+                                  pp.BackBufferWidth == width && pp.BackBufferHeight == height;
+
+                  if (!sameMode)
+                      orig(width, height, fullscreen);
+              }
           }
+          '@ | Set-Content .\src\TerraBoost\V023ApiProbe.cs -Encoding utf8
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tml-main-decompiled
-          path: |
-            Main_decompiled.cs
-            tModLoader.dll
-          if-no-files-found: error
+      - name: Build API probe against tModLoader 2026.07.3.0
+        shell: pwsh
+        run: |
+          dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'v0.2.3 API probe failed' }
