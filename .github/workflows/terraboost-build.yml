@@ -1,4 +1,4 @@
-name: Validate TerraBoost v0.3.0
+name: Validate TerraBoost v0.3.0 final
 
 on:
   push:
@@ -19,17 +19,32 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct exact v0.3.0 runtime source
+      - name: Reconstruct exact user source ZIP
         shell: pwsh
         run: |
-          $b64 = Get-Content .\terraboost-v030-payload\source.b64 -Raw
-          [IO.File]::WriteAllBytes('.\TerraBoost_v030.zip', [Convert]::FromBase64String($b64))
-          Expand-Archive '.\TerraBoost_v030.zip' '.\src' -Force
-          if (-not (Test-Path '.\src\TerraBoost\Core\HighFpsController.cs')) { throw 'source payload missing' }
-          Select-String -Path '.\src\TerraBoost\Core\HighFpsController.cs' -Pattern 'compatibility mode' | Out-Host
-          Get-Content '.\src\TerraBoost\build.txt' | Out-Host
+          $parts = Get-ChildItem .\terraboost-v030-payload-final\part_*.txt | Sort-Object Name
+          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          [IO.File]::WriteAllBytes('.\TerraBoost_v0.3.0_Source.zip', [Convert]::FromBase64String($b64))
+          $sha = (Get-FileHash '.\TerraBoost_v0.3.0_Source.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "Source SHA256=$sha"
+          if ($sha -ne '4c256a0d0ae99b3bc3ec3eedd72ebb836789a0bbf966a4d2b6ae42d4120ba36b') { throw "source hash mismatch: $sha" }
+          Expand-Archive '.\TerraBoost_v0.3.0_Source.zip' '.\src' -Force
 
-      - name: Build against tModLoader 2026.07.3.0
+      - name: Use standalone CI SDK
+        shell: pwsh
+        run: |
+          @'
+          <Project Sdk="Tomat.Terraria.ModLoader.Sdk/2.1.1">
+            <PropertyGroup>
+              <AssemblyName>TerraBoost</AssemblyName>
+              <LangVersion>latest</LangVersion>
+              <Nullable>enable</Nullable>
+              <TmlVersion>2026.07.3.0</TmlVersion>
+            </PropertyGroup>
+          </Project>
+          '@ | Set-Content '.\src\TerraBoost\TerraBoost.csproj' -Encoding utf8
+
+      - name: Build exact runtime source against tModLoader 2026.07.3.0
         shell: pwsh
         run: |
           dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
@@ -46,6 +61,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TerraBoost-v0.3.0
+          name: TerraBoost-v0.3.0-final
           path: artifact/TerraBoost_v0.3.0.tmod
           if-no-files-found: error
