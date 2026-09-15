@@ -1,4 +1,4 @@
-name: Validate TerraBoost v0.2.3 display hook
+name: Validate TerraBoost v0.3.0
 
 on:
   push:
@@ -19,60 +19,33 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct v0.2.2 source
+      - name: Reconstruct exact v0.3.0 runtime source
         shell: pwsh
         run: |
-          $parts = Get-ChildItem .\terraboost-v022-payload\part_*.txt | Sort-Object Name
-          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          [IO.File]::WriteAllBytes('.\source.zip', [Convert]::FromBase64String($b64))
-          Expand-Archive '.\source.zip' '.\src' -Force
+          $b64 = Get-Content .\terraboost-v030-payload\source.b64 -Raw
+          [IO.File]::WriteAllBytes('.\TerraBoost_v030.zip', [Convert]::FromBase64String($b64))
+          Expand-Archive '.\TerraBoost_v030.zip' '.\src' -Force
+          if (-not (Test-Path '.\src\TerraBoost\Core\HighFpsController.cs')) { throw 'source payload missing' }
+          Select-String -Path '.\src\TerraBoost\Core\HighFpsController.cs' -Pattern 'compatibility mode' | Out-Host
+          Get-Content '.\src\TerraBoost\build.txt' | Out-Host
 
-      - name: Add v0.2.3 API compile probe
-        shell: pwsh
-        run: |
-          @'
-          using System;
-          using Terraria;
-          using Terraria.ModLoader;
-
-          namespace TerraBoost;
-
-          internal static class V023ApiProbe
-          {
-              internal static void Install()
-              {
-                  On_Main.SetDisplayMode += Hook;
-                  _ = Main.instance?.GraphicsDevice?.PresentationParameters.PresentationInterval.ToString();
-              }
-
-              internal static void Remove()
-              {
-                  On_Main.SetDisplayMode -= Hook;
-              }
-
-              private static void Hook(On_Main.orig_SetDisplayMode orig, int width, int height, bool fullscreen)
-              {
-                  if (Main.graphics is null || Main.instance is null)
-                  {
-                      orig(width, height, fullscreen);
-                      return;
-                  }
-
-                  var viewport = Main.instance.GraphicsDevice.Viewport;
-                  var pp = Main.instance.GraphicsDevice.PresentationParameters;
-                  bool sameMode = Main.graphics.IsFullScreen == fullscreen &&
-                                  Main.screenWidth == width && Main.screenHeight == height &&
-                                  viewport.Width == width && viewport.Height == height &&
-                                  pp.BackBufferWidth == width && pp.BackBufferHeight == height;
-
-                  if (!sameMode)
-                      orig(width, height, fullscreen);
-              }
-          }
-          '@ | Set-Content .\src\TerraBoost\V023ApiProbe.cs -Encoding utf8
-
-      - name: Build API probe against tModLoader 2026.07.3.0
+      - name: Build against tModLoader 2026.07.3.0
         shell: pwsh
         run: |
           dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'v0.2.3 API probe failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'TerraBoost v0.3.0 build failed' }
+
+      - name: Collect compiled tmod
+        shell: pwsh
+        run: |
+          $tmod = Get-ChildItem -Path .\src -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $tmod) { throw 'TerraBoost.tmod not produced' }
+          New-Item -ItemType Directory -Path .\artifact -Force | Out-Null
+          Copy-Item $tmod.FullName '.\artifact\TerraBoost_v0.3.0.tmod' -Force
+          Write-Host "TMOD=$($tmod.FullName)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TerraBoost-v0.3.0
+          path: artifact/TerraBoost_v0.3.0.tmod
+          if-no-files-found: error
