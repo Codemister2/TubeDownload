@@ -1,4 +1,4 @@
-name: Validate TerraBoost v0.2.2
+name: Inspect tModLoader frame pacing
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  inspect:
     runs-on: windows-latest
     permissions:
       contents: read
@@ -19,49 +19,64 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct exact v0.2.2 source ZIP
-        shell: pwsh
-        run: |
-          $parts = Get-ChildItem .\terraboost-v022-payload\part_*.txt | Sort-Object Name
-          if ($parts.Count -ne 6) { throw "Expected 6 payload parts, found $($parts.Count)" }
-          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          [IO.File]::WriteAllBytes('.\TerraBoost_Optimization_v0.2.2_Source.zip', [Convert]::FromBase64String($b64))
-          $hash = (Get-FileHash '.\TerraBoost_Optimization_v0.2.2_Source.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
-          Write-Host "Source SHA256: $hash"
-          if ($hash -ne '3d4589269b50a7c4e4b7b8a8045f4fcfe1b700d34e717c9a3a0521d3ac0f61f5') { throw "Source ZIP hash mismatch" }
-          Expand-Archive '.\TerraBoost_Optimization_v0.2.2_Source.zip' '.\v022' -Force
-
-      - name: Build exact TerraBoost v0.2.2 source
+      - name: Reconstruct source and restore exact tModLoader references
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $project = '.\v022\TerraBoost\TerraBoost.csproj'
-          $success = $false
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
-            Write-Host "Build attempt $attempt"
-            dotnet build $project -c Release
-            if ($LASTEXITCODE -eq 0) { $success = $true; break }
-            if ($attempt -lt 3) { Start-Sleep -Seconds 30 }
-          }
-          if (-not $success) { throw 'TerraBoost v0.2.2 failed to build after 3 attempts' }
+          $parts = Get-ChildItem .\terraboost-v022-payload\part_*.txt | Sort-Object Name
+          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          [IO.File]::WriteAllBytes('.\source.zip', [Convert]::FromBase64String($b64))
+          Expand-Archive '.\source.zip' '.\src' -Force
+          dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'restore/build failed' }
 
-      - name: Locate compiled tMod
+      - name: Locate exact runtime assemblies
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path .\v022 -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
-          if (-not $files) {
-            $files = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
+          $tml = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\.nuget\\packages\\tomat.terraria.modloader.sdk' } | Select-Object -First 1
+          if (-not $tml) { $tml = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Select-Object -First 1 }
+          if (-not $tml) { throw 'tModLoader.dll not found' }
+          Write-Host "TML=$($tml.FullName)"
+          Copy-Item $tml.FullName .\tModLoader.dll -Force
+          $fna = Get-ChildItem -Path $tml.DirectoryName -Filter FNA.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($fna) { Copy-Item $fna.FullName .\FNA.dll -Force; Write-Host "FNA=$($fna.FullName)" }
+
+      - name: Decompile Main and inspect pacing
+        shell: pwsh
+        run: |
+          dotnet tool install --global ilspycmd --version 9.*
+          ilspycmd -t Terraria.Main .\tModLoader.dll | Out-File .\Main_decompiled.cs -Encoding utf8
+          $patterns = @(
+            'EndDraw',
+            'TargetElapsedTime',
+            'IsFixedTimeStep',
+            'terrariasFixedTiming',
+            'UpdateTimeAccumulator',
+            'FrameSkipMode',
+            'frameRate',
+            'maxFrame',
+            'Sleep',
+            'SpinWait',
+            '100.0',
+            '0.01',
+            '10.0'
+          )
+          foreach ($p in $patterns) {
+            Write-Host "===== PATTERN: $p ====="
+            Select-String -Path .\Main_decompiled.cs -SimpleMatch -Pattern $p -Context 30,80 | Select-Object -First 8 | ForEach-Object {
+              $_.Context.PreContext
+              $_.Line
+              $_.Context.PostContext
+              Write-Host '-----'
+            }
           }
-          $file = $files | Select-Object -First 1
-          if (-not $file) { throw 'TerraBoost.tmod not found after build' }
-          Write-Host "Found: $($file.FullName)"
-          New-Item -ItemType Directory -Force -Path .\artifact | Out-Null
-          Copy-Item $file.FullName .\artifact\TerraBoost.tmod -Force
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TerraBoost-v0.2.2-tmod
-          path: artifact/TerraBoost.tmod
+          name: tml-main-decompiled
+          path: |
+            Main_decompiled.cs
+            tModLoader.dll
           if-no-files-found: error
