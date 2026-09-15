@@ -1,0 +1,137 @@
+{
+  "Mods": {
+    "TerraBoost": {
+      "Configs": {
+        "TerraBoostConfig": {
+          "DisplayName": "TerraBoost",
+          "Headers": {
+            "HighFPS": "High FPS / Frame Pacing",
+            "Optimization": "Optimization Presets",
+            "CustomProfile": "Custom Preset Controls",
+            "Diagnostics": "Diagnostics"
+          },
+          "EnableHighFPS": {
+            "Label": "Enable High FPS",
+            "Tooltip": "Allows rendering above 60 FPS while keeping Terraria gameplay simulation at 60 updates per second."
+          },
+          "FrameCap": {
+            "Label": "Frame Cap",
+            "Tooltip": "60-1000 FPS. Set to 0 for Unlimited. Very high caps can increase GPU usage."
+          },
+          "DisableVSync": {
+            "Label": "Disable VSync",
+            "Tooltip": "Allows rendering above the monitor refresh rate. Turn this off if you prefer normal VSync behavior."
+          },
+          "SmoothEntityMotion": {
+            "Label": "Smooth Entity Motion",
+            "Tooltip": "Interpolates players, NPCs and projectiles between Terraria's 60 Hz logic updates."
+          },
+          "SmoothCamera": {
+            "Label": "Smooth Camera",
+            "Tooltip": "Smooths camera movement between logic updates."
+          },
+          "SmoothWorldItems": {
+            "Label": "Smooth Dropped Items",
+            "Tooltip": "Interpolates moving dropped items between logic updates."
+          },
+          "InterpolateOnlyNearScreen": {
+            "Label": "Only Smooth Nearby Entities",
+            "Tooltip": "Recommended. Skips interpolation work for entities far outside the screen to reduce CPU cost."
+          },
+          "InterpolationCullMargin": {
+            "Label": "Interpolation Screen Margin",
+            "Tooltip": "Extra pixels outside the screen that are still interpolated. Larger values improve compatibility with long trails but cost more CPU."
+          },
+          "LimitFPSWhenUnfocused": {
+            "Label": "Limit FPS When Unfocused",
+            "Tooltip": "Reduces CPU/GPU use while Terraria is in the background."
+          },
+          "UnfocusedFPSCap": {
+            "Label": "Unfocused FPS Cap"
+          },
+          "LimitMenuFPS": {
+            "Label": "Limit Menu FPS",
+            "Tooltip": "Prevents the title and menu screens from rendering at unnecessarily high FPS."
+          },
+          "MenuFPSCap": {
+            "Label": "Menu FPS Cap"
+          },
+          "EnableOptimizations": {
+            "Label": "Enable TerraBoost Optimizer",
+            "Tooltip": "Master switch for particle, weather and visual-effect optimizations. Does not affect gameplay entities or world logic."
+          },
+          "Preset": {
+            "Label": "Optimization Preset",
+            "Tooltip": "Auto is recommended. Balanced keeps visuals high. Performance is stronger. LowEnd is for weak PCs. Potato aggressively reduces cosmetic effects. Custom uses the controls below."
+          },
+          "AdaptiveVisualQuality": {
+            "Label": "Adaptive Visual Quality",
+            "Tooltip": "Dynamically lowers cosmetic particle and weather budgets when FPS stays below your target. Auto preset always uses adaptive tuning."
+          },
+          "AdaptiveTargetFPS": {
+            "Label": "Adaptive Target FPS",
+            "Tooltip": "The FPS TerraBoost tries to protect by scaling cosmetic effects. If your frame cap is lower, the lower cap is used as the target."
+          },
+          "MaxDustToDraw": {
+            "Label": "Max Dust Drawn",
+            "Tooltip": "Custom preset only. Limits how many dust particles Terraria draws."
+          },
+          "MaxActiveDust": {
+            "Label": "Max Active Dust",
+            "Tooltip": "Custom preset only. 0 disables the hard active-dust cap."
+          },
+          "MaxRain": {
+            "Label": "Max Rain",
+            "Tooltip": "Custom preset only. Lower values reduce weather rendering load."
+          },
+          "MaxActiveGore": {
+            "Label": "Max Active Gore",
+            "Tooltip": "Custom preset only. 0 disables the hard gore cap unless Disable Gore is enabled."
+          },
+          "DisableGore": {
+            "Label": "Disable Gore Particles",
+            "Tooltip": "Custom preset only. Removes cosmetic gore entities. The Potato preset enables this automatically."
+          },
+          "CullOffscreenDust": {
+            "Label": "Cull Off-screen Dust",
+            "Tooltip": "Removes cosmetic dust far outside the visible screen."
+          },
+          "CullOffscreenGore": {
+            "Label": "Cull Off-screen Gore",
+            "Tooltip": "Removes cosmetic gore far outside the visible screen."
+          },
+          "VisualCullMargin": {
+            "Label": "Off-screen Cull Margin",
+            "Tooltip": "Extra pixels around the screen kept alive before cosmetic particles are culled."
+          },
+          "VisualCullIntervalTicks": {
+            "Label": "Cull Interval (Ticks)",
+            "Tooltip": "How often cosmetic culling runs. Smaller numbers react faster but use slightly more CPU."
+          },
+          "DisableBackgrounds": {
+            "Label": "Disable Backgrounds",
+            "Tooltip": "Custom preset only. Can provide a large gain on weak GPUs at the cost of background visuals."
+          },
+          "DisableHeatDistortion": {
+            "Label": "Disable Heat Distortion"
+          },
+          "DisableStormEffects": {
+            "Label": "Disable Storm Effects"
+          },
+          "WaveQualityOverride": {
+            "Label": "Wave Quality Override",
+            "Tooltip": "Custom preset only. -1 keeps your original setting; 0-3 overrides it."
+          },
+          "LightingModeOverride": {
+            "Label": "Lighting Mode Override",
+            "Tooltip": "Custom preset only. KeepCurrent preserves your original lighting setting. Potato uses Retro lighting to reduce visual cost."
+          },
+          "ShowPerformanceOverlay": {
+            "Label": "Show Performance Overlay",
+            "Tooltip": "Shows FPS, UPS, active optimizer preset, adaptive scale and current cosmetic budgets."
+          }
+        }
+      }
+    }
+  }
+}
