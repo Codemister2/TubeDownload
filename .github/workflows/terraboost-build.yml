@@ -19,25 +19,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Reconstruct and patch TerraBoost source
+      - name: Build TerraBoost v0.2.0
         shell: pwsh
         run: |
-          $parts = Get-ChildItem .\terraboost-ci\tbpart_* | Sort-Object Name
-          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          [IO.File]::WriteAllBytes("$pwd\TerraBoost_CI.zip", [Convert]::FromBase64String($b64))
-          Expand-Archive -Path .\TerraBoost_CI.zip -DestinationPath .\ci-src -Force
-          Copy-Item .\terraboost-ci\en-US_Mods.TerraBoost.hjson .\ci-src\TerraBoost_CI\Localization\en-US_Mods.TerraBoost.hjson -Force
-
-          $systemPath = '.\ci-src\TerraBoost_CI\Systems\TerraBoostSystem.cs'
-          $source = Get-Content $systemPath -Raw
-          $source = $source -replace '(?m)^\s*var font = FontAssets\.MouseText\.Value;\r?\n', ''
-          $source = $source -replace '(?m)^\s*spriteBatch\.DrawString\(font, text, position \+ new Vector2\(2f, 2f\), Color\.Black \* 0\.8f\);\r?\n\s*spriteBatch\.DrawString\(font, text, position, Color\.White\);', '        Utils.DrawBorderString(spriteBatch, text, position, Color.White);'
-          Set-Content $systemPath $source
-
-      - name: Build TerraBoost
-        shell: pwsh
-        run: |
-          dotnet build .\ci-src\TerraBoost_CI\TerraBoost.csproj -c Release
+          dotnet build .\terraboost-v020\TerraBoost\TerraBoost.csproj -c Release
 
       - name: Locate compiled tMod
         shell: pwsh
@@ -54,6 +39,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TerraBoost-tmod
+          name: TerraBoost-v0.2.0-tmod
           path: artifact/TerraBoost.tmod
           if-no-files-found: error
