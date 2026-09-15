@@ -26,6 +26,7 @@ jobs:
           $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
           [IO.File]::WriteAllBytes("$pwd\TerraBoost_CI.zip", [Convert]::FromBase64String($b64))
           Expand-Archive -Path .\TerraBoost_CI.zip -DestinationPath .\ci-src -Force
+          Remove-Item .\ci-src\TerraBoost_CI\Localization\en-US_Mods.TerraBoost.hjson -Force -ErrorAction SilentlyContinue
 
       - name: Build TerraBoost
         shell: pwsh
