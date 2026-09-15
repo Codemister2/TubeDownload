@@ -1,0 +1,8 @@
+displayName = TerraBoost - High FPS & Optimization
+author = Codemister
+version = 0.2.0
+side = Client
+includeSource = true
+hideCode = false
+hideResources = false
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*, README.md
