@@ -1,0 +1,41 @@
+{
+  "Mods": {
+    "TerraBoost": {
+      "Configs": {
+        "TerraBoostConfig": {
+          "DisplayName": "TerraBoost",
+          "Headers": {
+            "HighFPS": "High FPS",
+            "Optimization": "Optimization",
+            "CustomProfile": "Custom Profile",
+            "Diagnostics": "Diagnostics"
+          },
+          "EnableHighFPS": {"Label": "Enable High FPS", "Tooltip": "Unlock rendering above 60 FPS while keeping gameplay simulation at 60 updates per second."},
+          "FrameCap": {"Label": "Frame Cap", "Tooltip": "60-1000 FPS. Set to 0 for Unlimited."},
+          "DisableVSync": {"Label": "Disable VSync", "Tooltip": "Lets rendering exceed the monitor refresh rate. TerraBoost still uses its own frame limiter when a cap is selected."},
+          "SmoothEntityMotion": {"Label": "Smooth Entity Motion", "Tooltip": "Interpolates players, NPCs, and projectiles between 60 Hz logic ticks."},
+          "SmoothCamera": {"Label": "Smooth Camera", "Tooltip": "Interpolates the camera with the local player for smoother scrolling."},
+          "SmoothWorldItems": {"Label": "Smooth Dropped Items", "Tooltip": "Interpolates moving dropped items between logic ticks."},
+          "Preset": {"Label": "Optimization Preset", "Tooltip": "Balanced preserves visuals; Performance is stronger; Extreme maximizes FPS; Custom uses the values below."},
+          "AdaptiveVisualQuality": {"Label": "Adaptive Visual Quality", "Tooltip": "Automatically lowers cosmetic budgets when measured FPS stays well below your selected cap."},
+          "LimitFPSWhenUnfocused": {"Label": "Limit FPS When Unfocused", "Tooltip": "Reduces GPU and CPU usage while the game window is not active."},
+          "UnfocusedFPSCap": {"Label": "Unfocused FPS Cap"},
+          "MaxDustToDraw": {"Label": "Max Dust Drawn"},
+          "MaxActiveDust": {"Label": "Max Active Dust", "Tooltip": "Custom profile only. 0 disables the hard active-dust cap."},
+          "MaxRain": {"Label": "Max Rain"},
+          "MaxActiveGore": {"Label": "Max Active Gore"},
+          "CullOffscreenDust": {"Label": "Cull Off-screen Dust"},
+          "CullOffscreenGore": {"Label": "Cull Off-screen Gore"},
+          "VisualCullMargin": {"Label": "Off-screen Cull Margin"},
+          "VisualCullIntervalTicks": {"Label": "Cull Interval (Ticks)"},
+          "DisableBackgrounds": {"Label": "Disable Backgrounds"},
+          "DisableHeatDistortion": {"Label": "Disable Heat Distortion"},
+          "DisableStormEffects": {"Label": "Disable Storm Effects"},
+          "WaveQualityOverride": {"Label": "Wave Quality Override", "Tooltip": "-1 keeps your current setting; 0-3 overrides it."},
+          "ForceColorLighting": {"Label": "Force Color Lighting", "Tooltip": "Forces Terraria's Color lighting mode. Leave off to preserve your current lighting mode."},
+          "ShowPerformanceOverlay": {"Label": "Show Performance Overlay", "Tooltip": "Shows measured render FPS, simulation UPS, active cosmetics, profile, and adaptive quality scale."}
+        }
+      }
+    }
+  }
+}
