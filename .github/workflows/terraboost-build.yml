@@ -1,4 +1,4 @@
-name: Build TerraBoost tMod
+name: Inspect TerraBoost/tModLoader timing
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  inspect:
     runs-on: windows-latest
     permissions:
       contents: read
@@ -19,26 +19,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build TerraBoost v0.2.0
+      - name: Build TerraBoost so tModLoader refs are restored
         shell: pwsh
         run: |
           dotnet build .\terraboost-v020\TerraBoost\TerraBoost.csproj -c Release
 
-      - name: Locate compiled tMod
+      - name: Decompile Terraria.Main timing code
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
-          if (-not $files) {
-            $files = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue
+          dotnet tool install --global ilspycmd --version 9.*
+          $dll = Get-ChildItem -Path $env:USERPROFILE -Recurse -Filter tModLoader.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $dll) { throw 'tModLoader.dll not found' }
+          Write-Host "Using $($dll.FullName)"
+          ilspycmd -t Terraria.Main $dll.FullName | Out-File -FilePath .\Main_decompiled.cs -Encoding utf8
+          $patterns = @('TargetElapsedTime','terrariasFixedTiming','UpdateTimeAccumulator','FrameSkipMode','DoUpdate(','override void Update','ShouldUpdateEntities','GameUpdateCount')
+          foreach ($p in $patterns) {
+            Write-Host "===== $p ====="
+            Select-String -Path .\Main_decompiled.cs -Pattern $p -Context 12,30 | Select-Object -First 6 | ForEach-Object { $_.ToString(); $_.Context.PreContext; $_.Line; $_.Context.PostContext; Write-Host '---' }
           }
-          $file = $files | Select-Object -First 1
-          if (-not $file) { throw "TerraBoost.tmod not found after build" }
-          Write-Host "Found: $($file.FullName)"
-          New-Item -ItemType Directory -Force -Path .\artifact | Out-Null
-          Copy-Item $file.FullName .\artifact\TerraBoost.tmod -Force
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TerraBoost-v0.2.0-tmod
-          path: artifact/TerraBoost.tmod
+          name: Main-decompiled
+          path: Main_decompiled.cs
           if-no-files-found: error
