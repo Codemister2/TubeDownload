@@ -1,0 +1,8 @@
+<Project Sdk="Tomat.Terraria.ModLoader.Sdk/2.1.1">
+  <PropertyGroup>
+    <AssemblyName>TerraBoost</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TmlVersion>2026.07.3.0</TmlVersion>
+  </PropertyGroup>
+</Project>
