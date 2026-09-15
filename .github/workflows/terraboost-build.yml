@@ -26,7 +26,7 @@ jobs:
           $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
           [IO.File]::WriteAllBytes("$pwd\TerraBoost_CI.zip", [Convert]::FromBase64String($b64))
           Expand-Archive -Path .\TerraBoost_CI.zip -DestinationPath .\ci-src -Force
-          Remove-Item .\ci-src\TerraBoost_CI\Localization\en-US_Mods.TerraBoost.hjson -Force -ErrorAction SilentlyContinue
+          Copy-Item .\terraboost-ci\en-US_Mods.TerraBoost.hjson .\ci-src\TerraBoost_CI\Localization\en-US_Mods.TerraBoost.hjson -Force
 
           $systemPath = '.\ci-src\TerraBoost_CI\Systems\TerraBoostSystem.cs'
           $source = Get-Content $systemPath -Raw
