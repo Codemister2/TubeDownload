@@ -1,0 +1,14 @@
+Client-side Terraria/tModLoader performance mod focused on smoother high-FPS rendering and scalable optimization without changing gameplay speed.
+
+Features:
+- Configurable render cap from 60-1000 FPS plus Unlimited
+- Terraria gameplay simulation remains at 60 UPS
+- Near-screen player, NPC, projectile, item and camera interpolation
+- Auto, Balanced, Performance, LowEnd, Potato and Custom presets
+- Adaptive particle/weather budgets based on measured FPS
+- Dust, gore and rain limiting with off-screen cosmetic culling
+- Background, distortion, storm, wave and lighting optimizations
+- Low-end and potato-PC modes for much weaker hardware
+- Menu and unfocused FPS limiters to reduce wasted CPU/GPU use
+- Live FPS/UPS and optimization diagnostics overlay
+- /terraboost runtime commands
