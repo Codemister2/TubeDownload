@@ -1,4 +1,4 @@
-name: Validate TerraBoost v0.3.0 final
+name: Build and package TerraBoost v0.3.0
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -30,37 +31,100 @@ jobs:
           if ($sha -ne '4c256a0d0ae99b3bc3ec3eedd72ebb836789a0bbf966a4d2b6ae42d4120ba36b') { throw "source hash mismatch: $sha" }
           Expand-Archive '.\TerraBoost_v0.3.0_Source.zip' '.\src' -Force
 
-      - name: Use standalone CI SDK
+      - name: Download pinned official tModLoader
         shell: pwsh
         run: |
-          @'
-          <Project Sdk="Tomat.Terraria.ModLoader.Sdk/2.1.1">
-            <PropertyGroup>
-              <AssemblyName>TerraBoost</AssemblyName>
-              <LangVersion>latest</LangVersion>
-              <Nullable>enable</Nullable>
-              <TmlVersion>2026.07.3.0</TmlVersion>
-            </PropertyGroup>
-          </Project>
-          '@ | Set-Content '.\src\TerraBoost\TerraBoost.csproj' -Encoding utf8
+          Invoke-WebRequest 'https://github.com/tModLoader/tModLoader/releases/download/v2026.07.3.0/tModLoader.zip' -OutFile '.\tModLoader.zip'
+          $sha = (Get-FileHash '.\tModLoader.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne '6f51610f4b0f167d1620d0e8c83264ba14e047421e97d9f8053eb40e3d764e1a') { throw "tModLoader hash mismatch: $sha" }
+          Expand-Archive '.\tModLoader.zip' '.\tml' -Force
 
-      - name: Build exact runtime source against tModLoader 2026.07.3.0
+      - name: Compile and package using tModLoader
         shell: pwsh
         run: |
-          dotnet build .\src\TerraBoost\TerraBoost.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'TerraBoost v0.3.0 build failed' }
+          $source = (Resolve-Path '.\src\TerraBoost').Path
+          $save = Join-Path $env:RUNNER_TEMP 'TerraBoost-tml-save'
+          if (Test-Path $save) { Remove-Item $save -Recurse -Force }
+          New-Item -ItemType Directory -Path $save -Force | Out-Null
+          Push-Location '.\tml'
+          try {
+            # The official -build command compiles, writes Info/resources and saves a .tmod.
+            # It exits before game/Steam initialization; no Terraria installation is needed.
+            dotnet tModLoader.dll -server -build $source -tmlsavedirectory $save
+            if ($LASTEXITCODE -ne 0) { throw 'TerraBoost compile/package failed' }
+          } finally { Pop-Location }
+          $tmod = Join-Path $save 'Mods\TerraBoost.tmod'
+          if (-not (Test-Path $tmod)) { throw "Expected package missing: $tmod" }
+          New-Item -ItemType Directory -Path '.\artifact' -Force | Out-Null
+          Copy-Item $tmod '.\artifact\TerraBoost.tmod'
+          Copy-Item '.\TerraBoost_v0.3.0_Source.zip' '.\artifact\TerraBoost_v0.3.0_Source.zip'
 
-      - name: Collect compiled tmod
-        shell: pwsh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify package integrity and preserved source
+        shell: python
         run: |
-          $tmod = Get-ChildItem -Path .\src -Recurse -Filter TerraBoost.tmod -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $tmod) { throw 'TerraBoost.tmod not produced' }
-          New-Item -ItemType Directory -Path .\artifact -Force | Out-Null
-          Copy-Item $tmod.FullName '.\artifact\TerraBoost_v0.3.0.tmod' -Force
-          Write-Host "TMOD=$($tmod.FullName)"
+          import hashlib, io, pathlib, struct, zlib, zipfile
+          path = pathlib.Path('artifact/TerraBoost.tmod')
+          b = path.read_bytes()
+          f = io.BytesIO(b)
+          def read_string():
+              n = shift = 0
+              while True:
+                  byte = f.read(1)[0]
+                  n |= (byte & 127) << shift
+                  if byte < 128:
+                      return f.read(n).decode('utf-8')
+                  shift += 7
+                  assert shift < 35, 'Invalid string length'
+          def read_int():
+              return struct.unpack('<i', f.read(4))[0]
+          assert f.read(4) == b'TMOD', 'Not a tModLoader package'
+          assert read_string() == '2026.7.3.0', 'Wrong tModLoader version'
+          digest = f.read(20)
+          f.read(256)
+          length = read_int()
+          assert length == len(b) - f.tell(), 'Payload length mismatch'
+          assert hashlib.sha1(b[f.tell():]).digest() == digest, 'Payload hash mismatch'
+          assert read_string() == 'TerraBoost', 'Wrong mod name'
+          assert read_string() == '0.3.0', 'Wrong mod version'
+          entries = [(read_string(), read_int(), read_int()) for _ in range(read_int())]
+          contents = {}
+          for name, raw_size, stored_size in entries:
+              assert name not in contents and raw_size >= 0 and stored_size >= 0
+              data = f.read(stored_size)
+              assert len(data) == stored_size, 'Truncated entry'
+              if stored_size != raw_size:
+                  data = zlib.decompress(data, -15)
+              assert len(data) == raw_size, name
+              contents[name] = data
+          assert f.tell() == len(b), 'Unexpected trailing bytes'
+          assert contents['TerraBoost.dll'].startswith(b'MZ'), 'Missing compiled assembly'
+          assert contents['Info'], 'Missing mod metadata'
+          assert contents['Localization/en-US_Mods.TerraBoost.hjson'], 'Missing localization'
+          with zipfile.ZipFile('artifact/TerraBoost_v0.3.0_Source.zip') as original:
+              for name in original.namelist():
+                  if name.endswith('.cs') or name.endswith('.hjson'):
+                      assert contents[name.removeprefix('TerraBoost/')] == original.read(name), name
+          print('Verified TerraBoost v0.3.0: package hash, assembly, metadata, localization and exact source')
+          checksums = '\n'.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name
+                                for p in sorted(path.parent.iterdir()) if p.is_file()) + '\n'
+          (path.parent / 'SHA256SUMS.txt').write_text(checksums, encoding='utf-8')
 
       - uses: actions/upload-artifact@v4
         with:
           name: TerraBoost-v0.3.0-final
-          path: artifact/TerraBoost_v0.3.0.tmod
+          path: artifact/*
           if-no-files-found: error
+
+      - name: Upload diagnostic logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TerraBoost-build-logs
+          path: |
+            tml/tModLoader-Logs/
+            ${{ runner.temp }}/TerraBoost-tml-save/Logs/
+          if-no-files-found: ignore
