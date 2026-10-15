@@ -2,6 +2,8 @@ name: Kuudra Pilot Fabric 26.1.2 Build
 on:
   push:
     branches: [kuudrapilot-fabric-2612-build-20261015]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   build:
