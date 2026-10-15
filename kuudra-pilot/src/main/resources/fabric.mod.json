@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "kuudrapilot",
+  "version": "${version}",
+  "name": "Kuudra Pilot",
+  "description": "Client-only Kuudra supply fishing/delivery assistant; experimental automation.",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.codemister.kuudra.KuudraPilot"] },
+  "depends": {
+    "minecraft": "=26.1.2",
+    "java": ">=25",
+    "fabricloader": ">=0.19.5",
+    "fabric-api": ">=0.155.2"
+  },
+  "license": "All Rights Reserved"
+}
